@@ -7,7 +7,12 @@
  * > $DSH_HOME/.credentials.yaml      (provider-managed, writable)
  * > <invocation cwd>/.env            (read-only fallback)
  * > $DSH_HOME/.env                   (read-only fallback)
+ * > registered credential sources    (read-only, in registration order)
  * ```
+ *
+ * The seam consults registered sources after every layer above, so a plugin
+ * that discovers a credential elsewhere can never shadow this provider's
+ * writable store.
  *
  * The inherited environment wins because `DEEPSEEK_API_KEY=… dsh`, a CI
  * secret, or a container `-e` is this run's explicit intent; it cannot be
@@ -521,6 +526,8 @@ export class LocalCredentialProvider extends CredentialProvider {
     debounceMs: z.number().min(0).default(100),
   })
 
+  protected override readonly ownedSourceIds = ['env', 'file', 'project-env', 'user-env']
+
   private readonly spec: ResolvedSpec
   /**
    * Raw text of the last read or persisted document; `undefined` while the
@@ -614,7 +621,7 @@ export class LocalCredentialProvider extends CredentialProvider {
     /* jscpd:ignore-end */
   }
 
-  override resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+  protected override resolveOwn(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
     const inherited = this.inherited(ref)
     if (inherited !== undefined) return Promise.resolve({ value: inherited, source: 'env' })
     const stored = this.values.get(ref)
@@ -624,7 +631,7 @@ export class LocalCredentialProvider extends CredentialProvider {
     return Promise.resolve(undefined)
   }
 
-  override describe(ref: CredentialRef): Promise<CredentialInfo> {
+  protected override describeOwn(ref: CredentialRef): Promise<CredentialInfo> {
     // Only the inherited environment is unwritable: it is the one layer this
     // process cannot edit. A user `.env` value is writable in the sense that
     // matters — storing a key replaces it as the effective one.

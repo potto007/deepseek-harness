@@ -15,6 +15,8 @@ import type {
  * always-writable `memory` source seeded from plugin config.
  */
 export class MemoryCredentials extends CredentialProvider {
+  protected override readonly ownedSourceIds = ['memory']
+
   private readonly store = new Map<string, string>()
   private readonly records = new Map<CredentialKey, CredentialRecord>()
 
@@ -23,14 +25,14 @@ export class MemoryCredentials extends CredentialProvider {
     for (const [key, value] of Object.entries(seed)) this.store.set(key, value)
   }
 
-  override resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+  protected override resolveOwn(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
     const value = this.store.get(ref)
     return Promise.resolve(value === undefined || value.length === 0
       ? undefined
       : { value, source: 'memory' })
   }
 
-  override describe(ref: CredentialRef): Promise<CredentialInfo> {
+  protected override describeOwn(ref: CredentialRef): Promise<CredentialInfo> {
     const value = this.store.get(ref)
     const configured = value !== undefined && value.length > 0
     return Promise.resolve({

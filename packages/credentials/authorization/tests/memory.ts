@@ -20,11 +20,11 @@ import type {
 export class MemoryCredentials extends CredentialProvider {
   private readonly records = new Map<CredentialKey, CredentialRecord>()
 
-  override resolve(_ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+  protected override resolveOwn(_ref: CredentialRef): Promise<ResolvedCredential | undefined> {
     return Promise.resolve(undefined)
   }
 
-  override describe(_ref: CredentialRef): Promise<CredentialInfo> {
+  protected override describeOwn(_ref: CredentialRef): Promise<CredentialInfo> {
     return Promise.resolve({ configured: false, writable: true })
   }
 

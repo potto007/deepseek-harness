@@ -82,3 +82,65 @@ describe('the credentials seam through the memory provider', () => {
     expect(ctx.get('credentials')).toBeUndefined()
   })
 })
+
+describe('registered credential sources', () => {
+  it('answers only when no provider-owned layer does', async () => {
+    const ctx = await boot({ DEEPSEEK_API_KEY: 'sk-stored' })
+    ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-external') })
+
+    expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-stored', source: 'memory' })
+
+    await ctx.credentials.unset(REF)
+    expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-external', source: 'external' })
+    expect(await ctx.credentials.describe(REF)).toEqual({ configured: true, source: 'external', writable: true })
+  })
+
+  it('treats an empty source answer as absent', async () => {
+    const ctx = await boot()
+    ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('') })
+    expect(await ctx.credentials.resolve(REF)).toBeUndefined()
+    expect(await ctx.credentials.describe(REF)).toEqual({ configured: false, writable: true })
+  })
+
+  it('consults sources in registration order and stops at the first answer', async () => {
+    const ctx = await boot()
+    const seen: string[] = []
+    ctx.credentials.registerSource({
+      id: 'first',
+      read: () => { seen.push('first'); return Promise.resolve(undefined) },
+    })
+    ctx.credentials.registerSource({
+      id: 'second',
+      read: () => { seen.push('second'); return Promise.resolve('sk-second') },
+    })
+    ctx.credentials.registerSource({
+      id: 'third',
+      read: () => { seen.push('third'); return Promise.resolve('sk-third') },
+    })
+
+    expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-second', source: 'second' })
+    expect(seen).toEqual(['first', 'second'])
+  })
+
+  it('ignores a duplicate id and hands back a no-op disposer', async () => {
+    const ctx = await boot()
+    ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-winner') })
+    const undo = ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-loser') })
+    undo()
+    expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-winner', source: 'external' })
+  })
+
+  it('removes a source when its registration disposes', async () => {
+    const ctx = await boot()
+    const undo = ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-external') })
+    expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-external', source: 'external' })
+    undo()
+    expect(await ctx.credentials.resolve(REF)).toBeUndefined()
+  })
+
+  it('refuses a source that reuses a provider-owned layer id', async () => {
+    const ctx = await boot()
+    expect(() => ctx.credentials.registerSource({ id: 'memory', read: () => Promise.resolve('sk-x') }))
+      .toThrow(/"memory" is a provider-owned layer id/)
+  })
+})
