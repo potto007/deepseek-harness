@@ -126,7 +126,7 @@ describe('registered credential sources', () => {
     const ctx = await boot()
     ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-winner') })
     const undo = ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-loser') })
-    undo()
+    await undo()
     expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-winner', source: 'external' })
   })
 
@@ -134,7 +134,7 @@ describe('registered credential sources', () => {
     const ctx = await boot()
     const undo = ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-external') })
     expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-external', source: 'external' })
-    undo()
+    await undo()
     expect(await ctx.credentials.resolve(REF)).toBeUndefined()
   })
 
