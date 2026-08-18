@@ -97,6 +97,14 @@
     - id: credentials
       name: '@deepseek-ai/dsh-credentials-local'
 
+    # The Anthropic OAuth access token Claude Code stored on this machine,
+    # offered read-only below every layer credentials-local answers itself, so
+    # it never shadows an exported variable or a stored key. Silent on a host
+    # without Claude Code. An `llm-pi-ai` route reaches it by naming
+    # `apiKeyEnv: ANTHROPIC_OAUTH_TOKEN`.
+    - id: credentials-claude-code
+      name: '@deepseek-ai/dsh-credentials-claude-code'
+
     # The pi-ai multi-provider twin, mounted dormant: zero routes (and no extra
     # models in the picker) until a `llm-pi-ai:` settings section supplies provider
     # profiles — then those routes register live, keys resolving per request

@@ -194,7 +194,7 @@ export abstract class CredentialProvider extends Service {
   }
 
   /** Registered read-only sources, consulted after the provider's own layers, in registration order. */
-  private readonly sources: CredentialSource[] = []
+  private sources: CredentialSource[] = []
 
   /**
    * Layer ids this provider reports as its own. A registered source may not
@@ -221,9 +221,11 @@ export abstract class CredentialProvider extends Service {
     }
     return this.ctx.effect(() => {
       this.sources.push(source)
+      // Replaced rather than spliced: resolution iterates the array across
+      // awaits, so a disposal mid-resolution leaves that pass reading the
+      // snapshot it started with instead of skipping a source.
       return () => {
-        const index = this.sources.indexOf(source)
-        if (index >= 0) this.sources.splice(index, 1)
+        this.sources = this.sources.filter(entry => entry !== source)
       }
     }, 'credentials.registerSource()')
   }

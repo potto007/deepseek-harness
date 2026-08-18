@@ -80,6 +80,21 @@ await ctx.credentials.deleteRecord(key)                  // no-op when absent
 
 `modifyRecord` is the only write path: it hands your mutation the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Records have no empty-value rule — a record carrying neither a key nor environment values states that its owner confirmed ambient authentication — and a configuration UI can enumerate every record to show what you are authorized for and find records a removed plugin left behind.
 
+### Registering a read-only source
+
+A plugin contributes a read-only layer without replacing the provider:
+
+```ts
+const dispose = ctx.credentials.registerSource({
+  id: 'claude-code',                                     // must not name a provider-owned layer
+  read: ref => Promise.resolve(valueFor(ref)),           // undefined, or an empty string, is absent
+})
+```
+
+Registered sources rank **last**: `resolve` and `describe` consult every layer the provider answers itself, then each source in registration order, and stop at the first non-empty answer. That ordering is what keeps the addition small — a source can never shadow the writable store, so `set` and `unset` keep their contracts unchanged and `describe().writable` stays the provider's answer. `describe()` reports the supplying source's `id` while it is the effective layer.
+
+A duplicate id is ignored first-wins, with a warning, and receives a no-op disposer so a late registration can neither displace the winner nor remove it. An id the provider declares in its own `ownedSourceIds` is refused outright: `resolve` would otherwise label a source's value with a layer that did not supply it. Registration is an effect, so a source disappears with the plugin that contributed it. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) is such a source rather than a provider: it serves the Anthropic OAuth token Claude Code stored on the machine.
+
 ### Using a key in configuration
 
 A settings section or `cordis.yml` entry names a key instead of containing it — an LLM adapter, for example, takes `apiKeyEnv`:
@@ -130,7 +145,7 @@ One doctrine and four consequences:
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition: the `credentialRef`/`credentialKey` brands, `ResolvedCredential`/`CredentialRecordInfo`, the abstract provider over both key spaces, contained fan-out |
+| [`src/index.ts`](src/index.ts) | Service Definition: the `credentialRef`/`credentialKey` brands, `ResolvedCredential`/`CredentialRecordInfo`, the abstract provider over both key spaces, registered read-only sources, contained fan-out |
 | [`src/types.ts`](src/types.ts) | Client-safe type surface: the `CredentialRef` and `CredentialKey` brands, the stored-record union, the `CredentialInfo` reference view, the `credentials/reference-updated` and `credentials/record-updated` declarations |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: `credentials/reference-updated` only fires while a credentials service is live |
 
@@ -153,6 +168,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Credentials subsystem reference](../../../docs/subsystems/credentials.md) — `CredentialRef`/`CredentialKey`, per-operation resolution, UI-safe info, provider layers, and the generated cordis surface.
 - [Local credentials store](../credentials-local/README.md) — the default on-machine store: where keys and records live and how the environment layers rank.
+- [Claude Code credential source](../credentials-claude-code/README.md) — the registered read-only source serving the Anthropic OAuth token Claude Code stored on the machine.
 - [Capability seams](../../../docs/capability-seams.md) — the Service Definition / Service Provider / Consumer split this package follows.
 
 -----
