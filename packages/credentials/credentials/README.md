@@ -93,7 +93,7 @@ const dispose = ctx.credentials.registerSource({
 
 Registered sources rank **last**: `resolve` and `describe` consult every layer the provider answers itself, then each source in registration order, and stop at the first non-empty answer. That ordering is what keeps the addition small — a source can never shadow the writable store, so `set` and `unset` keep their contracts unchanged and `describe().writable` stays the provider's answer. `describe()` reports the supplying source's `id` while it is the effective layer.
 
-A duplicate id is ignored first-wins, with a warning, and receives a no-op disposer so a late registration can neither displace the winner nor remove it. An id the provider declares in its own `ownedSourceIds` is refused outright: `resolve` would otherwise label a source's value with a layer that did not supply it. Registration is an effect, so a source disappears with the plugin that contributed it. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) is such a source rather than a provider: it serves the Anthropic OAuth token Claude Code stored on the machine.
+A duplicate id is ignored first-wins, with a warning, and receives a no-op disposer so a late registration can neither displace the winner nor remove it. An id the provider declares in its own `ownedSourceIds` is refused outright: `resolve` would otherwise label a source's value with a layer that did not supply it. Registration is an effect, so a source disappears with the plugin that contributed it. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) and [`dsh-credentials-codex`](../credentials-codex/README.md) are such sources rather than providers: each serves the OAuth token its CLI (Claude Code, the Codex CLI) stored on the machine.
 
 ### Using a key in configuration
 
@@ -169,6 +169,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Credentials subsystem reference](../../../docs/subsystems/credentials.md) — `CredentialRef`/`CredentialKey`, per-operation resolution, UI-safe info, provider layers, and the generated cordis surface.
 - [Local credentials store](../credentials-local/README.md) — the default on-machine store: where keys and records live and how the environment layers rank.
 - [Claude Code credential source](../credentials-claude-code/README.md) — the registered read-only source serving the Anthropic OAuth token Claude Code stored on the machine.
+- [Codex credential source](../credentials-codex/README.md) — the registered read-only source serving the OAuth token the Codex CLI stored on the machine.
 - [Capability seams](../../../docs/capability-seams.md) — the Service Definition / Service Provider / Consumer split this package follows.
 
 -----
