@@ -46,7 +46,7 @@ A duplicate id is ignored first-wins, with a warning, and receives a no-op dispo
 
 ## Providers
 
-[`dsh-credentials-local`](../credentials-local/README.md) layers the inherited process environment over its managed `$DSH_HOME/.credentials.yaml` document, with the launcher's project and user `.env` layers as fallbacks. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) is a registered source rather than a provider: it serves the Anthropic OAuth token Claude Code stored on the machine. The seam shape leaves room for keyring-, helper-command-, and KMS-backed providers; a remote settings provider never needs to carry secrets.
+[`dsh-credentials-local`](../credentials-local/README.md) layers the inherited process environment over its managed `$DSH_HOME/.credentials.yaml` document, with the launcher's project and user `.env` layers as fallbacks. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) and [`dsh-credentials-codex`](../credentials-codex/README.md) are registered sources rather than providers: each serves the OAuth token its CLI (Claude Code, the Codex CLI) stored on the machine. The seam shape leaves room for keyring-, helper-command-, and KMS-backed providers; a remote settings provider never needs to carry secrets.
 
 A provider implements `resolveOwn` and `describeOwn` over its own layers, plus `set` and `unset`; the base class composes those with registered sources, so no provider can omit source support by accident.
 
