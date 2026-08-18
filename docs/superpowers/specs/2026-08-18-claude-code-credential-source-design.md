@@ -124,7 +124,7 @@ The Anthropic model route needs no composition change. `packages/bundle/base` al
 
 Unit tests in both packages meet the per-file 100% `test:coverage` gate. They cover registration and disposal, duplicate-id first-wins, precedence against each existing layer, empty-value absence, token expiry, an absent file, a world-readable file, and malformed JSON.
 
-A seam invariant asserts that registered sources rank below the writable store, so the precedence cannot regress without failing a gate.
+`registerSource` refuses an id that the provider declares as one of its own layers, through a `ownedSourceIds` list each provider overrides. The check sits at registration because it is self-contained and can fail loud there. It does not sit in the invariant companion, which would have to read the provider's private source list to see it; invariants in this repository assert owned relationships over authoritative data rather than over internals. Precedence itself stays pinned by the unit tests above.
 
 The `credentials-local` tests move to the `resolveOwn` and `describeOwn` names.
 
