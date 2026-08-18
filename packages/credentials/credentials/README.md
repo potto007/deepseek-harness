@@ -29,9 +29,26 @@ await ctx.credentials.unset(ref)                         // no-op when absent; s
 
 The shadowing rule on `set`/`unset` is deliberate fail-loud: when a read-only source (the live process environment, in the local provider) currently supplies the reference, a write would appear to succeed while resolution keeps returning the shadowing value — the seam rejects instead, and `describe().writable` lets a UI render the reference read-only up front.
 
+## Registered sources
+
+A plugin contributes a read-only layer without replacing the provider:
+
+```ts
+const dispose = ctx.credentials.registerSource({
+  id: 'claude-code',                                     // must not name a provider-owned layer
+  read: ref => Promise.resolve(valueFor(ref)),           // undefined, or an empty string, is absent
+})
+```
+
+Registered sources rank **last**: `resolve` and `describe` consult every layer the provider answers itself, then each source in registration order, and stop at the first non-empty answer. That ordering is what keeps the addition small — a source can never shadow the writable store, so `set` and `unset` keep their contracts unchanged and `describe().writable` stays the provider's answer. `describe()` reports the supplying source's `id` while it is the effective layer.
+
+A duplicate id is ignored first-wins, with a warning, and receives a no-op disposer so a late registration can neither displace the winner nor remove it. An id the provider declares in its own `ownedSourceIds` is refused outright: `resolve` would otherwise label a source's value with a layer that did not supply it. Registration is an effect, so a source disappears with the plugin that contributed it.
+
 ## Providers
 
-[`dsh-credentials-local`](../credentials-local/README.md) layers the inherited process environment over its managed `$DSH_HOME/.credentials.yaml` document, with the launcher's project and user `.env` layers as fallbacks. The seam shape leaves room for keyring-, helper-command-, and KMS-backed providers; a remote settings provider never needs to carry secrets.
+[`dsh-credentials-local`](../credentials-local/README.md) layers the inherited process environment over its managed `$DSH_HOME/.credentials.yaml` document, with the launcher's project and user `.env` layers as fallbacks. [`dsh-credentials-claude-code`](../credentials-claude-code/README.md) is a registered source rather than a provider: it serves the Anthropic OAuth token Claude Code stored on the machine. The seam shape leaves room for keyring-, helper-command-, and KMS-backed providers; a remote settings provider never needs to carry secrets.
+
+A provider implements `resolveOwn` and `describeOwn` over its own layers, plus `set` and `unset`; the base class composes those with registered sources, so no provider can omit source support by accident.
 
 ## Model Experience
 

@@ -117,6 +117,14 @@ describe('the Claude Code credential source', () => {
     expect(await ctx.credentials.resolve(REF)).toEqual({ value: 'sk-ant-oat01-rotated', source: SOURCE_ID })
   })
 
+  it('propagates a stat failure that is not a missing file', async () => {
+    // A regular file standing where a directory must be: stat reports ENOTDIR,
+    // which is a real fault rather than "Claude Code is not installed".
+    const notADirectory = await documentAt(document())
+    const ctx = await boot(join(notADirectory, '.credentials.json'))
+    await expect(ctx.credentials.resolve(REF)).rejects.toThrow(/ENOTDIR/)
+  })
+
   it('refuses a document readable beyond its owner', async () => {
     const ctx = await boot(await documentAt(document(), 0o644))
     await expect(ctx.credentials.resolve(REF)).rejects.toThrow(/readable beyond its owner/)
