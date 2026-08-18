@@ -9,6 +9,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
+import type { Disposable } from '@deepseek-ai/cordis'
 import type { CredentialRef } from './types.ts'
 
 export type { CredentialRef } from './types.ts'
@@ -96,16 +97,16 @@ export abstract class CredentialProvider extends Service {
    * duplicate id is ignored first-wins, so a late registration can neither
    * displace the winner nor remove it through its own disposer.
    * @param source - the source to consult during fall-through.
-   * @returns the Cordis effect disposer, or a no-op disposer for a duplicate id.
+   * @returns the Cordis effect disposer, awaitable like every other effect teardown, or a no-op disposer for a duplicate id.
    * @throws Error when the id names one of this provider's own layers.
    */
-  registerSource(source: CredentialSource): () => void {
+  registerSource(source: CredentialSource): Disposable<Promise<void>> {
     if (this.ownedSourceIds.includes(source.id)) {
       throw new Error(`credentials: "${source.id}" is a provider-owned layer id and cannot be registered as a source`)
     }
     if (this.sources.some(existing => existing.id === source.id)) {
       this.ctx.logger.warn('credentials: source "%s" ignored because that id is already registered', source.id)
-      return () => {}
+      return () => Promise.resolve()
     }
     return this.ctx.effect(() => {
       this.sources.push(source)
