@@ -425,3 +425,38 @@ describe('real hot reload', () => {
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'self-written', source: 'file' })
   })
 })
+
+describe('registered credential sources', () => {
+  it('ranks a registered source below the managed document', async () => {
+    const dir = await tempDir()
+    const ctx = await boot({ path: join(dir, '.credentials.yaml'), watch: false })
+    ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-external') })
+
+    expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'sk-external', source: 'external' })
+    expect(await ctx.credentials.describe(KEY)).toEqual({ configured: true, source: 'external', writable: true })
+
+    await ctx.credentials.set(KEY, 'sk-stored')
+    expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'sk-stored', source: 'file' })
+
+    await ctx.credentials.unset(KEY)
+    expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'sk-external', source: 'external' })
+  })
+
+  it('lets the inherited environment outrank a registered source', async () => {
+    const dir = await tempDir()
+    vi.stubEnv('DSH_CRED_TEST', 'sk-inherited')
+    const ctx = await boot({ path: join(dir, '.credentials.yaml'), watch: false })
+    ctx.credentials.registerSource({ id: 'external', read: () => Promise.resolve('sk-external') })
+
+    expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'sk-inherited', source: 'env' })
+  })
+
+  it('refuses a source that reuses one of its own layer ids', async () => {
+    const dir = await tempDir()
+    const ctx = await boot({ path: join(dir, '.credentials.yaml'), watch: false })
+    for (const id of ['env', 'file', 'project-env', 'user-env']) {
+      expect(() => ctx.credentials.registerSource({ id, read: () => Promise.resolve('sk-x') }))
+        .toThrow(/provider-owned layer id/)
+    }
+  })
+})

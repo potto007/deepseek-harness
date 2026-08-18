@@ -98,13 +98,13 @@ class MemoryCredentials extends CredentialProvider {
 
   private readonly shadowed: Set<string>
 
-  resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+  protected override resolveOwn(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
     if (this.shadowed.has(ref)) return Promise.resolve({ value: 'from-env', source: 'env' })
     const value = this.values.get(ref)
     return Promise.resolve(value === undefined ? undefined : { value, source: 'file' })
   }
 
-  describe(ref: CredentialRef): Promise<CredentialInfo> {
+  protected override describeOwn(ref: CredentialRef): Promise<CredentialInfo> {
     if (this.shadowed.has(ref)) return Promise.resolve({ configured: true, source: 'env', writable: false })
     const configured = this.values.has(ref)
     return Promise.resolve({ configured, ...configured ? { source: 'file' } : {}, writable: true })
